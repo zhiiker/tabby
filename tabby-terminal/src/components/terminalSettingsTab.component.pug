@@ -10,8 +10,8 @@ div
             [(ngModel)]='config.store.terminal.frontend',
             (ngModelChange)='config.save()',
         )
-            option(value='xterm') xterm
             option(value='xterm-webgl') xterm (WebGL)
+            option(value='xterm') xterm (canvas)
 
     .form-line
         .header
@@ -21,6 +21,23 @@ div
             type='number',
             [(ngModel)]='config.store.terminal.scrollbackLines',
             (ngModelChange)='config.save()',
+        )
+
+    .form-line
+        .header
+            .title(translate) Draw bold text in bright colors
+        toggle(
+            [(ngModel)]='config.store.terminal.drawBoldTextInBrightColors',
+            (ngModelChange)='config.save()'
+        )
+
+    .form-line
+        .header
+            .title(translate) Sixel graphics support (experimental)
+            .description(translate) Display images via Sixel escape sequences
+        toggle(
+            [(ngModel)]='config.store.terminal.sixel',
+            (ngModelChange)='config.save(); config.requestRestart()'
         )
 
 div.mt-4
@@ -54,32 +71,15 @@ div.mt-4
         .header
             .title(translate) Right click
             .description(*ngIf='config.store.terminal.rightClick == "paste"', translate) Long-click for context menu
-        .btn-group(
+
+        select.form-control(
             [(ngModel)]='config.store.terminal.rightClick',
-            (ngModelChange)='config.save()',
-            ngbRadioGroup
+            (ngModelChange)='config.save()'
         )
-            label.btn.btn-secondary(ngbButtonLabel)
-                input(
-                    type='radio',
-                    ngbButton,
-                    value='off'
-                )
-                span(translate) Off
-            label.btn.btn-secondary(ngbButtonLabel)
-                input(
-                    type='radio',
-                    ngbButton,
-                    value='menu'
-                )
-                span(translate) Context menu
-            label.btn.btn-secondary(ngbButtonLabel)
-                input(
-                    type='radio',
-                    ngbButton,
-                    value='paste'
-                )
-                span(translate) Paste
+            option(ngValue='off', translate) Off
+            option(ngValue='menu', translate) Context menu
+            option(ngValue='paste', translate) Paste
+            option(ngValue='clipboard', translate) Paste if no selection, else copy
 
     .form-line
         .header
@@ -129,6 +129,14 @@ div.mt-4
 
     .form-line
         .header
+            .title(translate) Copy with formatting
+        toggle(
+            [(ngModel)]='config.store.terminal.copyAsHTML',
+            (ngModelChange)='config.save()',
+        )
+
+    .form-line
+        .header
             .title(translate) Bracketed paste (requires shell support)
             .description(translate) Prevents accidental execution of pasted commands
         toggle(
@@ -145,41 +153,55 @@ div.mt-4
             (ngModelChange)='config.save()',
         )
 
+    .form-line
+        .header
+            .title(translate) Trim whitespace and newlines
+            .description(translate) Remove whitespace and newlines around the copied text
+        toggle(
+            [(ngModel)]='config.store.terminal.trimWhitespaceOnPaste',
+            (ngModelChange)='config.save()',
+        )
+
 div.mt-4
     h3(translate) Sound
 
     .form-line
         .header
             .title(translate) Terminal bell
-        .btn-group(
-            [(ngModel)]='config.store.terminal.bell',
-            (ngModelChange)='config.save()',
-            ngbRadioGroup
-        )
-            label.btn.btn-secondary(ngbButtonLabel)
-                input(
-                    type='radio',
-                    ngbButton,
-                    [value]='"off"'
-                )
+        .btn-group
+            input.btn-check(
+                type='radio',
+                name='bell',
+                [(ngModel)]='config.store.terminal.bell',
+                (ngModelChange)='config.save()',
+                id='bellOff',
+                [value]='"off"'
+            )
+            label.btn.btn-secondary(for='bellOff')
                 span(translate) Off
-            label.btn.btn-secondary(ngbButtonLabel)
-                input(
-                    type='radio',
-                    ngbButton,
-                    [value]='"visual"'
-                )
+            input.btn-check(
+                type='radio',
+                name='bell',
+                [(ngModel)]='config.store.terminal.bell',
+                (ngModelChange)='config.save()',
+                id='bellVisual',
+                [value]='"visual"'
+            )
+            label.btn.btn-secondary(for='bellVisual')
                 span(translate) Visual
-            label.btn.btn-secondary(ngbButtonLabel)
-                input(
-                    type='radio',
-                    ngbButton,
-                    [value]='"audible"'
-                )
+            input.btn-check(
+                type='radio',
+                name='bell',
+                [(ngModel)]='config.store.terminal.bell',
+                (ngModelChange)='config.save()',
+                id='bellAudible',
+                [value]='"audible"'
+            )
+            label.btn.btn-secondary(for='bellAudible')
                 span(translate) Audible
 
     .alert.alert-info.d-flex.align-items-center(*ngIf='config.store.terminal.bell != "audible" && (config.store.terminal.profile || "").startsWith("wsl")')
-        .mr-auto(translate) WSL terminal bell can only be muted via Volume Mixer
+        .me-auto(translate) WSL terminal bell can only be muted via Volume Mixer
         button.btn.btn-secondary((click)='openWSLVolumeMixer()', translate) Show Mixer
 
 .mt-4

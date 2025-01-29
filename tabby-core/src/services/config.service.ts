@@ -9,10 +9,15 @@ import { ConfigProvider } from '../api/configProvider'
 import { PlatformService } from '../api/platform'
 import { HostAppService } from '../api/hostApp'
 import { Vault, VaultService } from './vault.service'
+import { serializeFunction } from '../utils'
+import { PartialProfileGroup, ProfileGroup } from '../api/profileProvider'
 const deepmerge = require('deepmerge')
 
 // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export const configMerge = (a, b) => deepmerge(a, b, { arrayMerge: (_d, s) => s }) // eslint-disable-line @typescript-eslint/no-var-requires
+
+// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+export const configMergeByDefault = (a, b) => deepmerge(a, b) // eslint-disable-line @typescript-eslint/no-var-requires
 
 const LATEST_VERSION = 1
 
@@ -41,7 +46,7 @@ export class ConfigProxy {
                         enumerable: true,
                         configurable: false,
                         get: () => proxy,
-                    }
+                    },
                 )
             } else {
                 Object.defineProperty(
@@ -54,7 +59,7 @@ export class ConfigProxy {
                         set: (value) => {
                             this.__setValue(key, value)
                         },
-                    }
+                    },
                 )
             }
         }
@@ -146,6 +151,7 @@ export class ConfigService {
             this.store.vault = vault.store
             this.save()
         })
+        this.save = serializeFunction(this.save.bind(this))
     }
 
     mergeDefaults (): unknown {
@@ -160,7 +166,7 @@ export class ConfigService {
                 defaults = configMerge(provider.defaults, defaults)
             }
             return defaults
-        }).reduce(configMerge)
+        }).reduce(configMergeByDefault)
     }
 
     getDefaults (): Record<string, any> {
@@ -205,14 +211,15 @@ export class ConfigService {
         cleanStore = await this.maybeEncryptConfig(cleanStore)
         await this.platform.saveConfig(yaml.dump(cleanStore))
         this.emitChange()
-        this.hostApp.broadcastConfigChange(JSON.parse(JSON.stringify(this.store)))
     }
 
     /**
      * Reads config YAML as string
      */
     readRaw (): string {
-        return yaml.dump(this._store)
+        // Scrub undefined values
+        const cleanStore = JSON.parse(JSON.stringify(this._store))
+        return yaml.dump(cleanStore)
     }
 
     /**
@@ -235,11 +242,13 @@ export class ConfigService {
      *
      * @typeparam T Base provider type
      */
-    enabledServices<T extends object> (services: T[]): T[] { // eslint-disable-line @typescript-eslint/ban-types
+    enabledServices<T extends object> (services: T[]|undefined): T[] { // eslint-disable-line @typescript-eslint/ban-types
+        if (!services) {
+            return []
+        }
         if (!this.servicesCache) {
             this.servicesCache = {}
-            const ngModule = window['rootModule'].ɵinj
-            for (const imp of ngModule.imports) {
+            for (const imp of window['pluginModules']) {
                 const module = imp.ngModule || imp
                 if (module.ɵinj?.providers) {
                     this.servicesCache[module.pluginName] = module.ɵinj.providers.map(provider => {
@@ -251,7 +260,9 @@ export class ConfigService {
         return services.filter(service => {
             for (const pluginName in this.servicesCache) {
                 if (this.servicesCache[pluginName].includes(service.constructor)) {
+                    const id = `${pluginName}:${service.constructor.name}`
                     return !this.store?.pluginBlacklist?.includes(pluginName)
+                        && !this.store?.providerBlacklist?.includes(id)
                 }
             }
             return true
@@ -345,6 +356,63 @@ export class ConfigService {
             delete config.serial?.connections
             delete window.localStorage.lastSerialConnection
             config.version = 3
+        }
+        if (config.version < 4) {
+            for (const p of config.profiles ?? []) {
+                if (!p.id) {
+                    p.id = `${p.type}:custom:${uuidv4()}`
+                }
+            }
+            config.version = 4
+        }
+        if (config.version < 5) {
+            const groups: PartialProfileGroup<ProfileGroup>[] = []
+            for (const p of config.profiles ?? []) {
+                if (!(p.group ?? '').trim()) {
+                    continue
+                }
+
+                let group = groups.find(x => x.name === p.group)
+                if (!group) {
+                    group = {
+                        id: `${uuidv4()}`,
+                        name: `${p.group}`,
+                    }
+                    groups.push(group)
+                }
+                p.group = group.id
+            }
+
+            const profileGroupCollapsed = JSON.parse(window.localStorage.profileGroupCollapsed ?? '{}')
+            for (const g of groups) {
+                if (profileGroupCollapsed[g.name]) {
+                    const collapsed = profileGroupCollapsed[g.name]
+                    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+                    delete profileGroupCollapsed[g.name]
+                    profileGroupCollapsed[g.id] = collapsed
+                }
+            }
+            window.localStorage.profileGroupCollapsed = JSON.stringify(profileGroupCollapsed)
+
+            config.groups = groups
+            config.version = 5
+        }
+        if (config.version < 6) {
+            if (config.ssh?.clearServiceMessagesOnConnect === false) {
+                config.profileDefaults ??= {}
+                config.profileDefaults.ssh ??= {}
+                config.profileDefaults.ssh.clearServiceMessagesOnConnect = false
+                delete config.ssh?.clearServiceMessagesOnConnect
+            }
+            config.version = 6
+        }
+        if (config.version < 7) {
+            if (!config.configSync?.host || config.configSync?.host === 'https://api.tabby.sh') {
+                config.configSync ??= {}
+                delete config.configSync.host
+                delete config.configSync.token
+            }
+            config.version = 7
         }
     }
 

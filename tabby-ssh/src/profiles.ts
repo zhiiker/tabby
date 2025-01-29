@@ -1,17 +1,16 @@
-import { Inject, Injectable, Optional } from '@angular/core'
-import { ProfileProvider, NewTabParameters, PartialProfile, TranslateService } from 'tabby-core'
-import * as ALGORITHMS from 'ssh2/lib/protocol/constants'
+import { Injectable, InjectFlags, Injector } from '@angular/core'
+import { NewTabParameters, PartialProfile, TranslateService, QuickConnectProfileProvider } from 'tabby-core'
 import { SSHProfileSettingsComponent } from './components/sshProfileSettings.component'
 import { SSHTabComponent } from './components/sshTab.component'
 import { PasswordStorageService } from './services/passwordStorage.service'
-import { ALGORITHM_BLACKLIST, SSHAlgorithmType, SSHProfile } from './api'
+import { SSHAlgorithmType, SSHProfile } from './api'
 import { SSHProfileImporter } from './api/importer'
+import { defaultAlgorithms } from './algorithms'
 
 @Injectable({ providedIn: 'root' })
-export class SSHProfilesService extends ProfileProvider<SSHProfile> {
+export class SSHProfilesService extends QuickConnectProfileProvider<SSHProfile> {
     id = 'ssh'
     name = 'SSH'
-    supportsQuickConnect = true
     settingsComponent = SSHProfileSettingsComponent
     configDefaults = {
         options: {
@@ -30,10 +29,10 @@ export class SSHProfilesService extends ProfileProvider<SSHProfile> {
             agentForward: false,
             warnOnClose: null,
             algorithms: {
-                hmac: [],
-                kex: [],
-                cipher: [],
-                serverHostKey: [],
+                hmac: [] as string[],
+                kex: [] as string[],
+                cipher: [] as string[],
+                serverHostKey: [] as string[],
             },
             proxyCommand: null,
             forwardedPorts: [],
@@ -43,34 +42,31 @@ export class SSHProfilesService extends ProfileProvider<SSHProfile> {
             httpProxyHost: null,
             httpProxyPort: null,
             reuseSession: true,
+            input: { backspace: 'backspace' },
         },
+        clearServiceMessagesOnConnect: true,
     }
 
     constructor (
         private passwordStorage: PasswordStorageService,
         private translate: TranslateService,
-        @Inject(SSHProfileImporter) @Optional() private importers: SSHProfileImporter[]|null,
+        private injector: Injector,
     ) {
         super()
         for (const k of Object.values(SSHAlgorithmType)) {
-            const defaultAlg = {
-                [SSHAlgorithmType.KEX]: 'DEFAULT_KEX',
-                [SSHAlgorithmType.HOSTKEY]: 'DEFAULT_SERVER_HOST_KEY',
-                [SSHAlgorithmType.CIPHER]: 'DEFAULT_CIPHER',
-                [SSHAlgorithmType.HMAC]: 'DEFAULT_MAC',
-            }[k]
-            this.configDefaults.options.algorithms[k] = ALGORITHMS[defaultAlg].filter(x => !ALGORITHM_BLACKLIST.includes(x))
+            this.configDefaults.options.algorithms[k] = [...defaultAlgorithms[k]]
             this.configDefaults.options.algorithms[k].sort()
         }
     }
 
     async getBuiltinProfiles (): Promise<PartialProfile<SSHProfile>[]> {
+        const importers = this.injector.get<SSHProfileImporter[]>(SSHProfileImporter as any, [], InjectFlags.Optional)
         let imported: PartialProfile<SSHProfile>[] = []
-        for (const importer of this.importers ?? []) {
+        for (const importer of importers) {
             try {
                 imported = imported.concat(await importer.getProfiles())
             } catch (e) {
-                console.warn('Could not parse OpenSSH config:', e)
+                console.warn('Could not import SSH profiles:', e)
             }
         }
         return [
@@ -140,5 +136,16 @@ export class SSHProfilesService extends ProfileProvider<SSHProfile> {
                 port,
             },
         }
+    }
+
+    intoQuickConnectString (profile: SSHProfile): string|null {
+        let s = profile.options.host
+        if (profile.options.user !== 'root') {
+            s = `${profile.options.user}@${s}`
+        }
+        if (profile.options.port !== 22) {
+            s = `${s}:${profile.options.port}`
+        }
+        return s
     }
 }

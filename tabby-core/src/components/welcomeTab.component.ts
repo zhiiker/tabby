@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/explicit-module-boundary-types */
-import { Component } from '@angular/core'
+import { Component, Injector } from '@angular/core'
 import { TranslateService } from '@ngx-translate/core'
 import { BaseTabComponent } from './baseTab.component'
 import { ConfigService } from '../services/config.service'
@@ -8,8 +8,8 @@ import { LocaleService } from '../services/locale.service'
 /** @hidden */
 @Component({
     selector: 'welcome-page',
-    template: require('./welcomeTab.component.pug'),
-    styles: [require('./welcomeTab.component.scss')],
+    templateUrl: './welcomeTab.component.pug',
+    styleUrls: ['./welcomeTab.component.scss'],
 })
 export class WelcomeTabComponent extends BaseTabComponent {
     enableGlobalHotkey = true
@@ -19,8 +19,9 @@ export class WelcomeTabComponent extends BaseTabComponent {
         public config: ConfigService,
         public locale: LocaleService,
         translate: TranslateService,
+        injector: Injector,
     ) {
-        super()
+        super(injector)
         this.setTitle(translate.instant('Welcome'))
     }
 

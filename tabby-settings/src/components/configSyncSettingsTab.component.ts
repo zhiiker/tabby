@@ -8,7 +8,7 @@ import { Config, ConfigSyncService } from '../services/configSync.service'
 /** @hidden */
 @Component({
     selector: 'config-sync-settings-tab',
-    template: require('./configSyncSettingsTab.component.pug'),
+    templateUrl: './configSyncSettingsTab.component.pug',
 })
 export class ConfigSyncSettingsTabComponent extends BaseComponent {
     connectionSuccessful: boolean|null = null
@@ -59,7 +59,7 @@ export class ConfigSyncSettingsTabComponent extends BaseComponent {
         const modal = this.ngbModal.open(PromptModalComponent)
         modal.componentInstance.prompt = this.translate.instant('Name for the new config')
         modal.componentInstance.value = name
-        name = (await modal.result)?.value
+        name = (await modal.result.catch(() => null))?.value
         if (!name) {
             return
         }
@@ -108,6 +108,24 @@ export class ConfigSyncSettingsTabComponent extends BaseComponent {
         this.notifications.info(this.translate.instant('Config downloaded'))
     }
 
+    async delete (cfg: Config) {
+        if ((await this.platform.showMessageBox({
+            type: 'warning',
+            message: this.translate.instant('Delete the config on the remote side?'),
+            buttons: [
+                this.translate.instant('Delete'),
+                this.translate.instant('Cancel'),
+            ],
+            defaultId: 1,
+            cancelId: 1,
+        })).response === 1) {
+            return
+        }
+        await this.configSync.delete(cfg)
+        this.loadConfigs()
+        this.notifications.info(this.translate.instant('Config deleted'))
+    }
+
     hasMatchingRemoteConfig () {
         return !!this.configs?.find(c => this.isActiveConfig(c))
     }
@@ -118,9 +136,13 @@ export class ConfigSyncSettingsTabComponent extends BaseComponent {
 
     openSyncHost () {
         if (this.config.store.configSync.host === 'https://api.tabby.sh') {
-            this.platform.openExternal('https://tabby.sh/app')
+            this.platform.openExternal('https://app.tabby.sh')
         } else {
             this.platform.openExternal(this.config.store.configSync.host)
         }
+    }
+
+    openTabbyWebInfo () {
+        this.platform.openExternal('https://github.com/Eugeny/tabby-web')
     }
 }
