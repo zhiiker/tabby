@@ -1,15 +1,17 @@
 import { ConfigProvider, Platform } from 'tabby-core'
+import { DefaultColorSchemes } from './colorSchemes'
 
 /** @hidden */
 export class TerminalConfigProvider extends ConfigProvider {
     defaults = {
         hotkeys: {
             'copy-current-path': [],
-            'scroll-to-bottom': [],
         },
         terminal: {
-            frontend: 'xterm',
+            frontend: 'xterm-webgl',
             fontSize: 14,
+            fontWeight: 400,
+            fontWeightBold: 700,
             fallbackFont: null,
             linePadding: 0,
             bell: 'off',
@@ -21,38 +23,21 @@ export class TerminalConfigProvider extends ConfigProvider {
             hideTabIndex: false,
             showTabProfileIcon: false,
             hideCloseButton: false,
+            hideTabOptionsButton: false,
             rightClick: 'menu',
             pasteOnMiddleClick: true,
             copyOnSelect: false,
+            copyAsHTML: true,
             scrollOnInput: true,
             altIsMeta: false,
             wordSeparator: ' ()[]{}\'"',
             colorScheme: {
                 __nonStructural: true,
-                name: 'Material',
-                foreground: '#eceff1',
-                background: 'rgba(38, 50, 56, 1)',
-                selection: null,
-                cursor: '#FFCC00',
-                cursorAccent: null,
-                colors: [
-                    '#000000',
-                    '#D62341',
-                    '#9ECE58',
-                    '#FAED70',
-                    '#396FE2',
-                    '#BB80B3',
-                    '#2DDAFD',
-                    '#d0d0d0',
-                    'rgba(255, 255, 255, 0.2)',
-                    '#FF5370',
-                    '#C3E88D',
-                    '#FFCB6B',
-                    '#82AAFF',
-                    '#C792EA',
-                    '#89DDFF',
-                    '#ffffff',
-                ],
+                ...DefaultColorSchemes.defaultColorScheme,
+            },
+            lightColorScheme: {
+                __nonStructural: true,
+                ...DefaultColorSchemes.defaultLightColorScheme,
             },
             customColorSchemes: [],
             warnOnMultilinePaste: true,
@@ -64,6 +49,10 @@ export class TerminalConfigProvider extends ConfigProvider {
             },
             detectProgress: true,
             scrollbackLines: 25000,
+            drawBoldTextInBrightColors: true,
+            sixel: true,
+            minimumContrastRatio: 4,
+            trimWhitespaceOnPaste: true,
         },
     }
 
@@ -100,6 +89,7 @@ export class TerminalConfigProvider extends ConfigProvider {
                 'previous-word': ['⌥-Left'],
                 'next-word': ['⌥-Right'],
                 'delete-previous-word': ['⌥-Backspace'],
+                'delete-line': ['⌘-Backspace'],
                 'delete-next-word': ['⌥-Delete'],
                 search: [
                     '⌘-F',
@@ -107,12 +97,19 @@ export class TerminalConfigProvider extends ConfigProvider {
                 'pane-focus-all': [
                     '⌘-Shift-I',
                 ],
+                'focus-all-tabs': [
+                    '⌘-⌥-Shift-I',
+                ],
+                'scroll-to-top': ['Shift-PageUp'],
+                'scroll-up': ['⌥-PageUp'],
+                'scroll-down': ['⌥-PageDown'],
+                'scroll-to-bottom': ['Shift-PageDown'],
             },
         },
         [Platform.Windows]: {
             terminal: {
                 font: 'Consolas',
-                rightClick: 'paste',
+                rightClick: 'clipboard',
                 pasteOnMiddleClick: false,
                 copyOnSelect: true,
             },
@@ -143,6 +140,7 @@ export class TerminalConfigProvider extends ConfigProvider {
                 'previous-word': ['Ctrl-Left'],
                 'next-word': ['Ctrl-Right'],
                 'delete-previous-word': ['Ctrl-Backspace'],
+                'delete-line': ['Ctrl-Shift-Backspace'],
                 'delete-next-word': ['Ctrl-Delete'],
                 search: [
                     'Ctrl-Shift-F',
@@ -150,6 +148,13 @@ export class TerminalConfigProvider extends ConfigProvider {
                 'pane-focus-all': [
                     'Ctrl-Shift-I',
                 ],
+                'focus-all-tabs': [
+                    'Ctrl-Alt-Shift-I',
+                ],
+                'scroll-to-top': ['Ctrl-PageUp'],
+                'scroll-up': ['Alt-PageUp'],
+                'scroll-down': ['Alt-PageDown'],
+                'scroll-to-bottom': ['Ctrl-PageDown'],
             },
         },
         [Platform.Linux]: {
@@ -184,6 +189,7 @@ export class TerminalConfigProvider extends ConfigProvider {
                 'previous-word': ['Ctrl-Left'],
                 'next-word': ['Ctrl-Right'],
                 'delete-previous-word': ['Ctrl-Backspace'],
+                'delete-line': ['Ctrl-Shift-Backspace'],
                 'delete-next-word': ['Ctrl-Delete'],
                 search: [
                     'Ctrl-Shift-F',
@@ -191,6 +197,13 @@ export class TerminalConfigProvider extends ConfigProvider {
                 'pane-focus-all': [
                     'Ctrl-Shift-I',
                 ],
+                'focus-all-tabs': [
+                    'Ctrl-Alt-Shift-I',
+                ],
+                'scroll-to-top': ['Ctrl-PageUp'],
+                'scroll-up': ['Alt-PageUp'],
+                'scroll-down': ['Alt-PageDown'],
+                'scroll-to-bottom': ['Ctrl-PageDown'],
             },
         },
     }

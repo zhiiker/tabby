@@ -2,12 +2,15 @@ import { Injectable } from '@angular/core'
 import { TranslateService } from '@ngx-translate/core'
 import { ProfilesService } from './services/profiles.service'
 import { HotkeyDescription, HotkeyProvider } from './api/hotkeyProvider'
-import { PartialProfile, Profile } from './api'
 
 /** @hidden */
 @Injectable()
 export class AppHotkeyProvider extends HotkeyProvider {
     hotkeys: HotkeyDescription[] = [
+        {
+            id: 'command-selector',
+            name: this.translate.instant('Show command selector'),
+        },
         {
             id: 'profile-selector',
             name: this.translate.instant('Show profile selector'),
@@ -18,7 +21,7 @@ export class AppHotkeyProvider extends HotkeyProvider {
         },
         {
             id: 'rename-tab',
-            name: this.translate.instant('Rename Tab'),
+            name: this.translate.instant('Rename tab'),
         },
         {
             id: 'close-tab',
@@ -55,6 +58,10 @@ export class AppHotkeyProvider extends HotkeyProvider {
         {
             id: 'duplicate-tab',
             name: this.translate.instant('Duplicate tab'),
+        },
+        {
+            id: 'restart-tab',
+            name: this.translate.instant('Restart tab'),
         },
         {
             id: 'explode-tab',
@@ -189,12 +196,64 @@ export class AppHotkeyProvider extends HotkeyProvider {
             name: this.translate.instant('Focus next pane'),
         },
         {
+            id: 'pane-nav-1',
+            name: this.translate.instant('Focus pane {number}', { number: 1 }),
+        },
+        {
+            id: 'pane-nav-2',
+            name: this.translate.instant('Focus pane {number}', { number: 2 }),
+        },
+        {
+            id: 'pane-nav-3',
+            name: this.translate.instant('Focus pane {number}', { number: 3 }),
+        },
+        {
+            id: 'pane-nav-4',
+            name: this.translate.instant('Focus pane {number}', { number: 4 }),
+        },
+        {
+            id: 'pane-nav-5',
+            name: this.translate.instant('Focus pane {number}', { number: 5 }),
+        },
+        {
+            id: 'pane-nav-6',
+            name: this.translate.instant('Focus pane {number}', { number: 6 }),
+        },
+        {
+            id: 'pane-nav-7',
+            name: this.translate.instant('Focus pane {number}', { number: 7 }),
+        },
+        {
+            id: 'pane-nav-8',
+            name: this.translate.instant('Focus pane {number}', { number: 8 }),
+        },
+        {
+            id: 'pane-nav-9',
+            name: this.translate.instant('Focus pane {number}', { number: 9 }),
+        },
+        {
             id: 'switch-profile',
             name: this.translate.instant('Switch profile in the active pane'),
         },
         {
             id: 'close-pane',
             name: this.translate.instant('Close focused pane'),
+        },
+        {
+            id: 'pane-increase-vertical',
+            name: this.translate.instant('Increase vertical split size'),
+        },
+        {
+            id: 'pane-decrease-vertical',
+            name: this.translate.instant('Decrease vertical split size'),
+        },
+        {
+            id: 'pane-increase-horizontal',
+            name: this.translate.instant('Increase horizontal split size'),
+        },
+        {
+            id: 'pane-decrease-horizontal',
+            name: this.translate.instant('Decrease horizontal split size'),
         },
     ]
 
@@ -205,20 +264,22 @@ export class AppHotkeyProvider extends HotkeyProvider {
 
     async provide (): Promise<HotkeyDescription[]> {
         const profiles = await this.profilesService.getProfiles()
+        const groups = await this.profilesService.getProfileGroups()
         return [
             ...this.hotkeys,
             ...profiles.map(profile => ({
-                id: `profile.${AppHotkeyProvider.getProfileHotkeyName(profile)}`,
+                id: `profile.${ProfilesService.getProfileHotkeyName(profile)}`,
                 name: this.translate.instant('New tab: {profile}', { profile: profile.name }),
             })),
             ...this.profilesService.getProviders().map(provider => ({
                 id: `profile-selectors.${provider.id}`,
                 name: this.translate.instant('Show {type} profile selector', { type: provider.name }),
             })),
+            ...groups.map(group => ({
+                id: `group-selectors.${group.id}`,
+                name: this.translate.instant('Show profile selector for group {name}', { name: group.name }),
+            })),
         ]
     }
 
-    static getProfileHotkeyName (profile: PartialProfile<Profile>): string {
-        return (profile.id ?? profile.name).replace(/\./g, '-')
-    }
 }

@@ -1,8 +1,10 @@
-import { Observable, Subject, AsyncSubject, takeUntil } from 'rxjs'
 import { Injectable, Inject } from '@angular/core'
+import { NgbModal } from '@ng-bootstrap/ng-bootstrap'
+import { Observable, Subject, AsyncSubject, takeUntil, debounceTime } from 'rxjs'
 
 import { BaseTabComponent } from '../components/baseTab.component'
 import { SplitTabComponent } from '../components/splitTab.component'
+import { RenameTabModalComponent } from '../components/renameTabModal.component'
 import { SelectorOption } from '../api/selector'
 import { RecoveryToken } from '../api/tabRecovery'
 import { BootstrapData, BOOTSTRAP_DATA } from '../api/mainProcess'
@@ -58,6 +60,7 @@ export class AppService {
     private tabClosed = new Subject<BaseTabComponent>()
     private tabDragActive = new Subject<BaseTabComponent|null>()
     private ready = new AsyncSubject<void>()
+    private recoveryStateChangedHint = new Subject<void>()
 
     private completionObservers = new Map<BaseTabComponent, CompletionObserver>()
 
@@ -79,14 +82,20 @@ export class AppService {
         private tabRecovery: TabRecoveryService,
         private tabsService: TabsService,
         private selector: SelectorService,
+        private ngbModal: NgbModal,
         @Inject(BOOTSTRAP_DATA) private bootstrapData: BootstrapData,
     ) {
         this.tabsChanged$.subscribe(() => {
+            this.recoveryStateChangedHint.next()
+        })
+
+        setInterval(() => {
+            this.recoveryStateChangedHint.next()
+        }, 30000)
+
+        this.recoveryStateChangedHint.pipe(debounceTime(1000)).subscribe(() => {
             this.tabRecovery.saveTabs(this.tabs)
         })
-        setInterval(() => {
-            this.tabRecovery.saveTabs(this.tabs)
-        }, 30000)
 
         config.ready$.toPromise().then(async () => {
             if (this.bootstrapData.isMainWindow) {
@@ -98,6 +107,12 @@ export class AppService {
                 }
                 /** Continue to store the tabs even if the setting is currently off */
                 this.tabRecovery.enabled = true
+            }
+        })
+
+        this.tabClosed$.subscribe(() => {
+            if (!this.tabs.length && this.config.store.appearance.lastTabClosesWindow) {
+                this.hostWindow.close()
             }
         })
 
@@ -117,7 +132,7 @@ export class AppService {
 
         if (this.bootstrapData.isMainWindow) {
             tab.recoveryStateChangedHint$.subscribe(() => {
-                this.tabRecovery.saveTabs(this.tabs)
+                this.recoveryStateChangedHint.next()
             })
         }
 
@@ -144,7 +159,7 @@ export class AppService {
     }
 
     removeTab (tab: BaseTabComponent): void {
-        const newIndex = Math.max(0, this.tabs.indexOf(tab) - 1)
+        const newIndex = Math.min(this.tabs.length - 2, this.tabs.indexOf(tab))
         this.tabs = this.tabs.filter((x) => x !== tab)
         if (tab === this._activeTab) {
             this.selectTab(this.tabs[newIndex])
@@ -215,11 +230,13 @@ export class AppService {
         if (this._activeTab) {
             this._activeTab.clearActivity()
             this._activeTab.emitBlurred()
+            this._activeTab.emitVisibility(false)
         }
         this._activeTab = tab
         this.activeTabChange.next(tab)
         setImmediate(() => {
             this._activeTab?.emitFocused()
+            this._activeTab?.emitVisibility(true)
         })
         this.hostWindow.setTitle(this._activeTab?.title)
     }
@@ -304,6 +321,16 @@ export class AppService {
         const i2 = this.tabs.indexOf(b)
         this.tabs[i1] = b
         this.tabs[i2] = a
+    }
+
+    renameTab (tab: BaseTabComponent): void {
+        const modal = this.ngbModal.open(RenameTabModalComponent)
+        modal.componentInstance.value = tab.customTitle || tab.title
+        modal.result.then(result => {
+            tab.setTitle(result)
+            tab.customTitle = result
+            this.emitTabsChanged()
+        }).catch(() => null)
     }
 
     /** @hidden */

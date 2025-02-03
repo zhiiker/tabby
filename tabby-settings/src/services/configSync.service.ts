@@ -75,6 +75,10 @@ export class ConfigSyncService {
         })
     }
 
+    async deleteConfig (id: number): Promise<any> {
+        return this.request('DELETE', `/api/1/configs/${id}`)
+    }
+
     setConfig (config: Config): void {
         this.config.store.configSync.configID = config.id
         this.config.save()
@@ -133,6 +137,16 @@ export class ConfigSyncService {
         }
     }
 
+    async delete (config: Config): Promise<void> {
+        try {
+            await this.deleteConfig(config.id)
+            this.logger.debug('Config deleted')
+        } catch (error) {
+            this.logger.error('Delete failed:', error)
+            throw error
+        }
+    }
+
     private async readConfigDataForSync (): Promise<any> {
         const data = yaml.load(await this.platform.loadConfig()) as any
         delete data.configSync
@@ -145,7 +159,7 @@ export class ConfigSyncService {
         await this.config.save()
     }
 
-    private async request (method: 'GET'|'POST'|'PATCH', url: string, params = {}) {
+    private async request (method: 'GET'|'POST'|'PATCH'|'DELETE', url: string, params = {}) {
         if (this.config.store.configSync.host.endsWith('/')) {
             this.config.store.configSync.host = this.config.store.configSync.host.slice(0, -1)
         }
@@ -170,13 +184,17 @@ export class ConfigSyncService {
 
     private async autoSync () {
         while (true) {
-            if (this.isEnabled() && this.config.store.configSync.auto) {
-                const cfg = await this.getConfig(this.config.store.configSync.configID)
-                if (new Date(cfg.modified_at) > this.lastRemoteChange) {
-                    this.logger.info('Remote config changed, downloading')
-                    this.download()
-                    this.lastRemoteChange = new Date(cfg.modified_at)
+            try {
+                if (this.isEnabled() && this.config.store.configSync.auto) {
+                    const cfg = await this.getConfig(this.config.store.configSync.configID)
+                    if (new Date(cfg.modified_at) > this.lastRemoteChange) {
+                        this.logger.info('Remote config changed, downloading')
+                        this.download()
+                        this.lastRemoteChange = new Date(cfg.modified_at)
+                    }
                 }
+            } catch (error) {
+                this.logger.debug('Recovering from autoSync network error')
             }
             await new Promise(resolve => setTimeout(resolve, 60000))
         }

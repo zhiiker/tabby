@@ -29,7 +29,7 @@ export class LoginScriptProcessor extends SessionMiddleware {
 
     constructor (
         private logger: Logger,
-        options: LoginScriptsOptions
+        options: LoginScriptsOptions,
     ) {
         super()
         this.remainingScripts = deepClone(options.scripts ?? [])
@@ -71,11 +71,6 @@ export class LoginScriptProcessor extends SessionMiddleware {
         }
 
         super.feedFromSession(data)
-    }
-
-    close (): void {
-        this.outputToSession.complete()
-        super.close()
     }
 
     executeUnconditionalScripts (): void {

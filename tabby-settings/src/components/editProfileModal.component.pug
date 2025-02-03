@@ -1,7 +1,7 @@
-.modal-header(*ngIf='!defaultsMode')
+.modal-header(*ngIf='defaultsMode === "disabled"')
     h3.m-0 {{profile.name}}
 
-.modal-header(*ngIf='defaultsMode')
+.modal-header(*ngIf='defaultsMode !== "disabled"')
     h3.m-0(
         translate='Defaults for {type}',
         [translateParams]='{type: profileProvider.name}'
@@ -10,7 +10,7 @@
 .modal-body
     .row
         .col-12.col-lg-4
-            .form-group(*ngIf='!defaultsMode')
+            .mb-3(*ngIf='defaultsMode === "disabled"')
                 label(translate) Name
                 input.form-control(
                     type='text',
@@ -18,17 +18,20 @@
                     [(ngModel)]='profile.name',
                 )
 
-            .form-group(*ngIf='!defaultsMode')
+            .mb-3(*ngIf='defaultsMode === "disabled"')
                 label(translate) Group
                 input.form-control(
                     type='text',
                     alwaysVisibleTypeahead,
                     placeholder='Ungrouped',
-                    [(ngModel)]='profile.group',
+                    [(ngModel)]='profileGroup',
                     [ngbTypeahead]='groupTypeahead',
+                    [inputFormatter]="groupFormatter",
+			        [resultFormatter]="groupFormatter",
+			        [editable]="false"
                 )
 
-            .form-group(*ngIf='!defaultsMode')
+            .mb-3(*ngIf='defaultsMode === "disabled"')
                 label(translate) Icon
                 .input-group
                     input.form-control(
@@ -38,13 +41,15 @@
                         [ngbTypeahead]='iconSearch',
                         [resultTemplate]='rt'
                     )
-                    .input-group-append
-                        .input-group-text
-                            i([class]='"fa-fw " + profile.icon')
+                    .input-group-text
+                        profile-icon(
+                            [icon]='profile.icon',
+                            [color]='profile.color'
+                        )
 
                 ng-template(#rt,let-r='result',let-t='term')
                     i([class]='"fa-fw " + r')
-                    ngb-highlight.ml-2([result]='r', [term]='t')
+                    ngb-highlight.ms-2([result]='r', [term]='t')
 
             .form-line
                 .header
@@ -63,6 +68,24 @@
                     .description(translate) Connection name will be used instead
                 toggle([(ngModel)]='profile.disableDynamicTitle')
 
+            .form-line
+                .header
+                    .title(translate) When a session ends
+                    .description(*ngIf='profile.behaviorOnSessionEnd == "auto"', translate) Only close the tab when session is explicitly terminated
+                select.form-control(
+                    [(ngModel)]='profile.behaviorOnSessionEnd',
+                )
+                    option(ngValue='auto', translate) Auto
+                    option(ngValue='keep', translate) Keep
+                    option(*ngIf='isConnectable()', ngValue='reconnect', translate) Reconnect
+                    option(ngValue='close', translate) Close
+            
+            .form-line(*ngIf='isConnectable()')
+                .header
+                    .title(translate) Clear terminal after connection
+                toggle(
+                    [(ngModel)]='profile.clearServiceMessagesOnConnect',
+                )
             .mb-4
 
         .col-12.col-lg-8(*ngIf='this.profileProvider.settingsComponent')

@@ -24,6 +24,12 @@ export class CommonSFTPContextMenu extends SFTPContextMenuItemProvider {
         return [
             {
                 click: async () => {
+                    await panel.openCreateDirectoryModal()
+                },
+                label: this.translate.instant('Create directory'),
+            },
+            {
+                click: async () => {
                     if ((await this.platform.showMessageBox({
                         type: 'warning',
                         message: this.translate.instant('Delete {fullPath}?', item),
@@ -47,6 +53,6 @@ export class CommonSFTPContextMenu extends SFTPContextMenuItemProvider {
         const modal = this.ngbModal.open(SFTPDeleteModalComponent)
         modal.componentInstance.item = item
         modal.componentInstance.sftp = session
-        await modal.result
+        await modal.result.catch(() => null)
     }
 }

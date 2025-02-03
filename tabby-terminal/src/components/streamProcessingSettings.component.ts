@@ -6,7 +6,7 @@ import { StreamProcessingOptions } from '../middleware/streamProcessing'
 /** @hidden */
 @Component({
     selector: 'stream-processing-settings',
-    template: require('./streamProcessingSettings.component.pug'),
+    templateUrl: './streamProcessingSettings.component.pug',
 })
 export class StreamProcessingSettingsComponent {
     @Input() options: StreamProcessingOptions
@@ -33,6 +33,7 @@ export class StreamProcessingSettingsComponent {
             description: _('Send bytes by typing in hex values'),
         },
     ]
+
     outputModes = [
         {
             key: null,
@@ -45,12 +46,15 @@ export class StreamProcessingSettingsComponent {
             description: _('Output is shown as a hexdump'),
         },
     ]
+
     newlineModes = [
         { key: null, name: _('Keep') },
         { key: 'strip', name: _('Strip') },
         { key: 'cr', name: _('Force CR') },
         { key: 'lf', name: _('Force LF') },
         { key: 'crlf', name: _('Force CRLF') },
+        { key: 'implicit_cr', name: _('Implicit CR in every LF') },
+        { key: 'implicit_lf', name: _('Implicit LF in every CR') },
     ]
 
     getInputModeName (key) {
@@ -59,5 +63,13 @@ export class StreamProcessingSettingsComponent {
 
     getOutputModeName (key) {
         return this.outputModes.find(x => x.key === key)?.name
+    }
+
+    setInputMode (mode) {
+        this.options.inputMode = mode
+    }
+
+    setOutputMode (mode) {
+        this.options.outputMode = mode
     }
 }
